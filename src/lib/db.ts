@@ -12,7 +12,12 @@ export async function getStudents(): Promise<Student[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching students:", error);
+    console.error("Error fetching students:", {
+      message: error.message,
+      code: error.code,
+      hint: (error as any).hint,
+      details: (error as any).details,
+    });
     return [];
   }
 
@@ -47,7 +52,12 @@ export async function createStudent(input: {
     .single();
 
   if (error) {
-    console.error("Error creating student:", error);
+    console.error("Error creating student:", {
+      message: error.message,
+      code: error.code,
+      hint: (error as any).hint,
+      details: (error as any).details,
+    });
     return null;
   }
 
@@ -84,7 +94,12 @@ export async function updateStudent(
     .single();
 
   if (error) {
-    console.error("Error updating student:", error);
+    console.error("Error updating student:", {
+      message: error.message,
+      code: error.code,
+      hint: (error as any).hint,
+      details: (error as any).details,
+    });
     return null;
   }
 
@@ -103,7 +118,12 @@ export async function deleteStudent(id: string): Promise<boolean> {
   const { error } = await supabase.from("students").delete().eq("id", id);
 
   if (error) {
-    console.error("Error deleting student:", error);
+    console.error("Error deleting student:", {
+      message: error.message,
+      code: error.code,
+      hint: (error as any).hint,
+      details: (error as any).details,
+    });
     return false;
   }
 
@@ -119,7 +139,12 @@ export async function toggleStudentFeeStatus(id: string): Promise<Student | null
     .single();
 
   if (fetchError) {
-    console.error("Error fetching student:", fetchError);
+    console.error("Error fetching student:", {
+      message: fetchError.message,
+      code: fetchError.code,
+      hint: (fetchError as any).hint,
+      details: (fetchError as any).details,
+    });
     return null;
   }
 
@@ -134,7 +159,12 @@ export async function toggleStudentFeeStatus(id: string): Promise<Student | null
     .single();
 
   if (error) {
-    console.error("Error toggling fee status:", error);
+    console.error("Error toggling fee status:", {
+      message: error.message,
+      code: error.code,
+      hint: (error as any).hint,
+      details: (error as any).details,
+    });
     return null;
   }
 
@@ -160,7 +190,12 @@ export async function getTeachers(): Promise<Teacher[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching teachers:", error);
+    console.error("Error fetching teachers:", {
+      message: error.message,
+      code: error.code,
+      hint: (error as any).hint,
+      details: (error as any).details,
+    });
     return [];
   }
 
@@ -191,7 +226,12 @@ export async function createTeacher(input: {
     .single();
 
   if (error) {
-    console.error("Error creating teacher:", error);
+    console.error("Error creating teacher:", {
+      message: error.message,
+      code: error.code,
+      hint: (error as any).hint,
+      details: (error as any).details,
+    });
     return null;
   }
 
@@ -224,7 +264,12 @@ export async function updateTeacher(
     .single();
 
   if (error) {
-    console.error("Error updating teacher:", error);
+    console.error("Error updating teacher:", {
+      message: error.message,
+      code: error.code,
+      hint: (error as any).hint,
+      details: (error as any).details,
+    });
     return null;
   }
 
@@ -241,7 +286,12 @@ export async function deleteTeacher(id: string): Promise<boolean> {
   const { error } = await supabase.from("teachers").delete().eq("id", id);
 
   if (error) {
-    console.error("Error deleting teacher:", error);
+    console.error("Error deleting teacher:", {
+      message: error.message,
+      code: error.code,
+      hint: (error as any).hint,
+      details: (error as any).details,
+    });
     return false;
   }
 
