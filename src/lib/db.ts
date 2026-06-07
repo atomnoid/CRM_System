@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { getSupabase } from "./supabase";
 import type { Student, Teacher } from "@/types";
 
 // ============================================
@@ -6,7 +6,7 @@ import type { Student, Teacher } from "@/types";
 // ============================================
 
 export async function getStudents(): Promise<Student[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("students")
     .select("*")
     .order("created_at", { ascending: false });
@@ -38,7 +38,7 @@ export async function createStudent(input: {
   monthlyFee: number;
   feePaid: boolean;
 }): Promise<Student | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("students")
     .insert([
       {
@@ -81,7 +81,7 @@ export async function updateStudent(
     feePaid: boolean;
   }
 ): Promise<Student | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("students")
     .update({
       name: input.name,
@@ -115,7 +115,7 @@ export async function updateStudent(
 }
 
 export async function deleteStudent(id: string): Promise<boolean> {
-  const { error } = await supabase.from("students").delete().eq("id", id);
+  const { error } = await getSupabase().from("students").delete().eq("id", id);
 
   if (error) {
     console.error("Error deleting student:", {
@@ -132,7 +132,7 @@ export async function deleteStudent(id: string): Promise<boolean> {
 
 export async function toggleStudentFeeStatus(id: string): Promise<Student | null> {
   // First, get the current student to toggle the fee status
-  const { data: student, error: fetchError } = await supabase
+  const { data: student, error: fetchError } = await getSupabase()
     .from("students")
     .select("fee_paid")
     .eq("id", id)
@@ -149,7 +149,7 @@ export async function toggleStudentFeeStatus(id: string): Promise<Student | null
   }
 
   // Update with toggled fee status
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("students")
     .update({
       fee_paid: !student.fee_paid,
@@ -184,7 +184,7 @@ export async function toggleStudentFeeStatus(id: string): Promise<Student | null
 // ============================================
 
 export async function getTeachers(): Promise<Teacher[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("teachers")
     .select("*")
     .order("created_at", { ascending: false });
@@ -213,7 +213,7 @@ export async function createTeacher(input: {
   subject: string;
   monthlySalary: number;
 }): Promise<Teacher | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("teachers")
     .insert([
       {
@@ -252,7 +252,7 @@ export async function updateTeacher(
     monthlySalary: number;
   }
 ): Promise<Teacher | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("teachers")
     .update({
       name: input.name,
@@ -283,7 +283,7 @@ export async function updateTeacher(
 }
 
 export async function deleteTeacher(id: string): Promise<boolean> {
-  const { error } = await supabase.from("teachers").delete().eq("id", id);
+  const { error } = await getSupabase().from("teachers").delete().eq("id", id);
 
   if (error) {
     console.error("Error deleting teacher:", {
