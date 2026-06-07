@@ -6,7 +6,22 @@ import { DashboardCard } from "@/components/dashboard-card";
 import { useCrm } from "@/components/crm-provider";
 
 function DashboardContent(): JSX.Element {
-  const { students } = useCrm();
+  const { students, isLoading } = useCrm();
+
+  if (isLoading) {
+    return (
+      <>
+        <Header title="Dashboard" description="Overview of your coaching institute metrics." />
+        <section className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <DashboardCard title="Total Students" value="Loading..." />
+          <DashboardCard title="Paid Students" value="Loading..." />
+          <DashboardCard title="Pending Students" value="Loading..." />
+          <DashboardCard title="Revenue Collected" value="Loading..." />
+          <DashboardCard title="Revenue Pending" value="Loading..." />
+        </section>
+      </>
+    );
+  }
 
   const totalStudents = students.length;
   const paidStudents = students.filter((s) => s.feePaid).length;
