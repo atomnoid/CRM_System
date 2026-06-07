@@ -47,7 +47,7 @@ export function StudentTable(): React.JSX.Element {
     setIsOpen(true);
   };
 
-  const onSubmit = (event: React.FormEvent<HTMLFormElement>): void => {
+  const onSubmit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     const payload = {
       name: formState.name.trim(),
@@ -61,9 +61,9 @@ export function StudentTable(): React.JSX.Element {
     }
 
     if (editingStudent) {
-      updateStudent(editingStudent.id, payload);
+      await updateStudent(editingStudent.id, payload);
     } else {
-      addStudent(payload);
+      await addStudent(payload);
     }
 
     setIsOpen(false);
