@@ -6,6 +6,8 @@ export interface Student {
   class: string;
   monthlyFee: number;
   feePaid: boolean;
+  paidTillMonth?: string;
+  createdAt?: string;
 }
 
 export interface Teacher {
@@ -13,4 +15,5 @@ export interface Teacher {
   name: string;
   subject: string;
   monthlySalary: number;
+  createdAt?: string;
 }
