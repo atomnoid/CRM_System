@@ -1,7 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { initialStudents, initialTeachers } from "@/lib/mock-data";
+import {
+  getStudents,
+  createStudent,
+  updateStudent,
+  deleteStudent,
+  toggleStudentFeeStatus,
+  getTeachers,
+  createTeacher,
+  updateTeacher,
+  deleteTeacher,
+} from "@/lib/db";
 import type { Student, Teacher } from "@/types";
 
 interface StudentInput {
@@ -20,49 +30,92 @@ interface TeacherInput {
 interface CrmContextValue {
   students: Student[];
   teachers: Teacher[];
-  addStudent: (input: StudentInput) => void;
-  updateStudent: (id: string, input: StudentInput) => void;
-  deleteStudent: (id: string) => void;
-  toggleStudentFeeStatus: (id: string) => void;
-  addTeacher: (input: TeacherInput) => void;
-  updateTeacher: (id: string, input: TeacherInput) => void;
-  deleteTeacher: (id: string) => void;
+  addStudent: (input: StudentInput) => Promise<void>;
+  updateStudent: (id: string, input: StudentInput) => Promise<void>;
+  deleteStudent: (id: string) => Promise<void>;
+  toggleStudentFeeStatus: (id: string) => Promise<void>;
+  addTeacher: (input: TeacherInput) => Promise<void>;
+  updateTeacher: (id: string, input: TeacherInput) => Promise<void>;
+  deleteTeacher: (id: string) => Promise<void>;
+  isLoading: boolean;
 }
 
 const CrmContext = React.createContext<CrmContextValue | undefined>(undefined);
 
 export function CrmProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const [students, setStudents] = React.useState<Student[]>(initialStudents);
-  const [teachers, setTeachers] = React.useState<Teacher[]>(initialTeachers);
+  const [students, setStudents] = React.useState<Student[]>([]);
+  const [teachers, setTeachers] = React.useState<Teacher[]>([]);
+  const [isLoading, setIsLoading] = React.useState<boolean>(true);
 
-  const addStudent = (input: StudentInput): void => {
-    setStudents((prev) => [...prev, { ...input, id: crypto.randomUUID() }]);
+  // Fetch initial data
+  React.useEffect(() => {
+    const fetchData = async (): Promise<void> => {
+      setIsLoading(true);
+      const [studentsData, teachersData] = await Promise.all([
+        getStudents(),
+        getTeachers(),
+      ]);
+      setStudents(studentsData);
+      setTeachers(teachersData);
+      setIsLoading(false);
+    };
+
+    fetchData();
+  }, []);
+
+  const addStudent = async (input: StudentInput): Promise<void> => {
+    const newStudent = await createStudent(input);
+    if (newStudent) {
+      setStudents((prev) => [newStudent, ...prev]);
+    }
   };
 
-  const updateStudent = (id: string, input: StudentInput): void => {
-    setStudents((prev) => prev.map((student) => (student.id === id ? { ...student, ...input } : student)));
+  const updateStudentData = async (id: string, input: StudentInput): Promise<void> => {
+    const updated = await updateStudent(id, input);
+    if (updated) {
+      setStudents((prev) =>
+        prev.map((student) => (student.id === id ? updated : student))
+      );
+    }
   };
 
-  const deleteStudent = (id: string): void => {
-    setStudents((prev) => prev.filter((student) => student.id !== id));
+  const deleteStudentData = async (id: string): Promise<void> => {
+    const success = await deleteStudent(id);
+    if (success) {
+      setStudents((prev) => prev.filter((student) => student.id !== id));
+    }
   };
 
-  const toggleStudentFeeStatus = (id: string): void => {
-    setStudents((prev) =>
-      prev.map((student) => (student.id === id ? { ...student, feePaid: !student.feePaid } : student))
-    );
+  const toggleStudentFeeStatusData = async (id: string): Promise<void> => {
+    const updated = await toggleStudentFeeStatus(id);
+    if (updated) {
+      setStudents((prev) =>
+        prev.map((student) => (student.id === id ? updated : student))
+      );
+    }
   };
 
-  const addTeacher = (input: TeacherInput): void => {
-    setTeachers((prev) => [...prev, { ...input, id: crypto.randomUUID() }]);
+  const addTeacher = async (input: TeacherInput): Promise<void> => {
+    const newTeacher = await createTeacher(input);
+    if (newTeacher) {
+      setTeachers((prev) => [newTeacher, ...prev]);
+    }
   };
 
-  const updateTeacher = (id: string, input: TeacherInput): void => {
-    setTeachers((prev) => prev.map((teacher) => (teacher.id === id ? { ...teacher, ...input } : teacher)));
+  const updateTeacherData = async (id: string, input: TeacherInput): Promise<void> => {
+    const updated = await updateTeacher(id, input);
+    if (updated) {
+      setTeachers((prev) =>
+        prev.map((teacher) => (teacher.id === id ? updated : teacher))
+      );
+    }
   };
 
-  const deleteTeacher = (id: string): void => {
-    setTeachers((prev) => prev.filter((teacher) => teacher.id !== id));
+  const deleteTeacherData = async (id: string): Promise<void> => {
+    const success = await deleteTeacher(id);
+    if (success) {
+      setTeachers((prev) => prev.filter((teacher) => teacher.id !== id));
+    }
   };
 
   return (
@@ -71,12 +124,13 @@ export function CrmProvider({ children }: { children: React.ReactNode }): React.
         students,
         teachers,
         addStudent,
-        updateStudent,
-        deleteStudent,
-        toggleStudentFeeStatus,
+        updateStudent: updateStudentData,
+        deleteStudent: deleteStudentData,
+        toggleStudentFeeStatus: toggleStudentFeeStatusData,
         addTeacher,
-        updateTeacher,
-        deleteTeacher
+        updateTeacher: updateTeacherData,
+        deleteTeacher: deleteTeacherData,
+        isLoading,
       }}
     >
       {children}
