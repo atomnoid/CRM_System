@@ -38,7 +38,8 @@ export async function createStudent(input: {
   monthlyFee: number;
   feePaid: boolean;
 }): Promise<Student | null> {
-  const { data, error } = await getSupabase()
+  const client = getSupabase();
+  const { data, error } = await (client
     .from("students")
     .insert([
       {
@@ -47,7 +48,7 @@ export async function createStudent(input: {
         monthly_fee: input.monthlyFee,
         fee_paid: input.feePaid,
       },
-    ])
+    ]) as any)
     .select()
     .single();
 
@@ -81,14 +82,15 @@ export async function updateStudent(
     feePaid: boolean;
   }
 ): Promise<Student | null> {
-  const { data, error } = await getSupabase()
+  const client = getSupabase();
+  const { data, error } = await (client
     .from("students")
     .update({
       name: input.name,
       class: input.class,
       monthly_fee: input.monthlyFee,
       fee_paid: input.feePaid,
-    })
+    }) as any)
     .eq("id", id)
     .select()
     .single();
@@ -149,11 +151,12 @@ export async function toggleStudentFeeStatus(id: string): Promise<Student | null
   }
 
   // Update with toggled fee status
-  const { data, error } = await getSupabase()
+  const client = getSupabase();
+  const { data, error } = await (client
     .from("students")
     .update({
       fee_paid: !student.fee_paid,
-    })
+    }) as any)
     .eq("id", id)
     .select()
     .single();
@@ -212,8 +215,8 @@ export async function createTeacher(input: {
   name: string;
   subject: string;
   monthlySalary: number;
-}): Promise<Teacher | null> {
-  const { data, error } = await getSupabase()
+}): Promclient = getSupabase();
+  const { data, error } = await (client
     .from("teachers")
     .insert([
       {
@@ -221,7 +224,8 @@ export async function createTeacher(input: {
         subject: input.subject,
         monthly_salary: input.monthlySalary,
       },
-    ])
+    ]) as anysalary: input.monthlySalary,
+    } as const)
     .select()
     .single();
 
@@ -249,13 +253,14 @@ export async function updateTeacher(
   input: {
     name: string;
     subject: string;
-    monthlySalary: number;
-  }
-): Promise<Teacher | null> {
-  const { data, error } = await getSupabase()
+  const client = getSupabase();
+  const { data, error } = await (client
     .from("teachers")
     .update({
       name: input.name,
+      subject: input.subject,
+      monthly_salary: input.monthlySalary,
+    }) as any)name: input.name,
       subject: input.subject,
       monthly_salary: input.monthlySalary,
     })
