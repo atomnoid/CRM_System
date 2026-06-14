@@ -11,7 +11,7 @@ import {
   createTeacher,
   updateTeacher,
   deleteTeacher,
-} from "@/lib/db";
+} from "@/lib/api-client";
 import type { Student, Teacher } from "@/types";
 
 interface StudentInput {
