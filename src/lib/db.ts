@@ -1,6 +1,46 @@
 import { getSupabase } from "./supabase";
 import type { Student, Teacher } from "@/types";
 
+function mapStudent(student: {
+  id: string;
+  name: string;
+  class: string;
+  monthly_fee: number;
+  fee_paid: boolean;
+  paid_till_month: string | null;
+  created_at: string;
+}): Student {
+  return {
+    id: student.id,
+    name: student.name,
+    class: student.class,
+    monthlyFee: student.monthly_fee,
+    feePaid: student.fee_paid,
+    paidTillMonth: student.paid_till_month ?? undefined,
+    createdAt: student.created_at,
+  };
+}
+
+function mapTeacher(teacher: {
+  id: string;
+  name: string;
+  subject: string;
+  monthly_salary: number;
+  created_at: string;
+}): Teacher {
+  return {
+    id: teacher.id,
+    name: teacher.name,
+    subject: teacher.subject,
+    monthlySalary: teacher.monthly_salary,
+    createdAt: teacher.created_at,
+  };
+}
+
+function logDbError(action: string, error: { message?: string; code?: string }): void {
+  console.error(`Error ${action}:`, error.message ?? error);
+}
+
 // ============================================
 // STUDENT OPERATIONS
 // ============================================
@@ -12,24 +52,11 @@ export async function getStudents(): Promise<Student[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching students:", {
-      message: error.message,
-      code: error.code,
-      hint: (error as any).hint,
-      details: (error as any).details,
-    });
+    logDbError("fetching students", error);
     return [];
   }
 
-  return (data || []).map((student: any) => ({
-    id: student.id,
-    name: student.name,
-    class: student.class,
-    monthlyFee: student.monthly_fee,
-    feePaid: student.fee_paid,
-    paidTillMonth: student.paid_till_month,
-    createdAt: student.created_at,
-  }));
+  return (data || []).map(mapStudent);
 }
 
 export async function createStudent(input: {
@@ -53,24 +80,11 @@ export async function createStudent(input: {
     .single();
 
   if (error) {
-    console.error("Error creating student:", {
-      message: error.message,
-      code: error.code,
-      hint: (error as any).hint,
-      details: (error as any).details,
-    });
+    logDbError("creating student", error);
     return null;
   }
 
-  return {
-    id: data.id,
-    name: data.name,
-    class: data.class,
-    monthlyFee: data.monthly_fee,
-    feePaid: data.fee_paid,
-    paidTillMonth: data.paid_till_month,
-    createdAt: data.created_at,
-  };
+  return mapStudent(data);
 }
 
 export async function updateStudent(
@@ -96,36 +110,18 @@ export async function updateStudent(
     .single();
 
   if (error) {
-    console.error("Error updating student:", {
-      message: error.message,
-      code: error.code,
-      hint: (error as any).hint,
-      details: (error as any).details,
-    });
+    logDbError("updating student", error);
     return null;
   }
 
-  return {
-    id: data.id,
-    name: data.name,
-    class: data.class,
-    monthlyFee: data.monthly_fee,
-    feePaid: data.fee_paid,
-    paidTillMonth: data.paid_till_month,
-    createdAt: data.created_at,
-  };
+  return mapStudent(data);
 }
 
 export async function deleteStudent(id: string): Promise<boolean> {
   const { error } = await getSupabase().from("students").delete().eq("id", id);
 
   if (error) {
-    console.error("Error deleting student:", {
-      message: error.message,
-      code: error.code,
-      hint: (error as any).hint,
-      details: (error as any).details,
-    });
+    logDbError("deleting student", error);
     return false;
   }
 
@@ -133,7 +129,6 @@ export async function deleteStudent(id: string): Promise<boolean> {
 }
 
 export async function toggleStudentFeeStatus(id: string): Promise<Student | null> {
-  // First, get the current student to toggle the fee status
   const { data: student, error: fetchError } = await getSupabase()
     .from("students")
     .select("fee_paid")
@@ -141,16 +136,10 @@ export async function toggleStudentFeeStatus(id: string): Promise<Student | null
     .single();
 
   if (fetchError) {
-    console.error("Error fetching student:", {
-      message: fetchError.message,
-      code: fetchError.code,
-      hint: (fetchError as any).hint,
-      details: (fetchError as any).details,
-    });
+    logDbError("fetching student", fetchError);
     return null;
   }
 
-  // Update with toggled fee status
   const client = getSupabase();
   const { data, error } = await (client
     .from("students")
@@ -162,24 +151,11 @@ export async function toggleStudentFeeStatus(id: string): Promise<Student | null
     .single();
 
   if (error) {
-    console.error("Error toggling fee status:", {
-      message: error.message,
-      code: error.code,
-      hint: (error as any).hint,
-      details: (error as any).details,
-    });
+    logDbError("toggling fee status", error);
     return null;
   }
 
-  return {
-    id: data.id,
-    name: data.name,
-    class: data.class,
-    monthlyFee: data.monthly_fee,
-    feePaid: data.fee_paid,
-    paidTillMonth: data.paid_till_month,
-    createdAt: data.created_at,
-  };
+  return mapStudent(data);
 }
 
 // ============================================
@@ -193,29 +169,19 @@ export async function getTeachers(): Promise<Teacher[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching teachers:", {
-      message: error.message,
-      code: error.code,
-      hint: (error as any).hint,
-      details: (error as any).details,
-    });
+    logDbError("fetching teachers", error);
     return [];
   }
 
-  return (data || []).map((teacher: any) => ({
-    id: teacher.id,
-    name: teacher.name,
-    subject: teacher.subject,
-    monthlySalary: teacher.monthly_salary,
-    createdAt: teacher.created_at,
-  }));
+  return (data || []).map(mapTeacher);
 }
 
 export async function createTeacher(input: {
   name: string;
   subject: string;
   monthlySalary: number;
-}): Promclient = getSupabase();
+}): Promise<Teacher | null> {
+  const client = getSupabase();
   const { data, error } = await (client
     .from("teachers")
     .insert([
@@ -224,28 +190,16 @@ export async function createTeacher(input: {
         subject: input.subject,
         monthly_salary: input.monthlySalary,
       },
-    ]) as anysalary: input.monthlySalary,
-    } as const)
+    ]) as any)
     .select()
     .single();
 
   if (error) {
-    console.error("Error creating teacher:", {
-      message: error.message,
-      code: error.code,
-      hint: (error as any).hint,
-      details: (error as any).details,
-    });
+    logDbError("creating teacher", error);
     return null;
   }
 
-  return {
-    id: data.id,
-    name: data.name,
-    subject: data.subject,
-    monthlySalary: data.monthly_salary,
-    createdAt: data.created_at,
-  };
+  return mapTeacher(data);
 }
 
 export async function updateTeacher(
@@ -253,6 +207,9 @@ export async function updateTeacher(
   input: {
     name: string;
     subject: string;
+    monthlySalary: number;
+  }
+): Promise<Teacher | null> {
   const client = getSupabase();
   const { data, error } = await (client
     .from("teachers")
@@ -260,43 +217,24 @@ export async function updateTeacher(
       name: input.name,
       subject: input.subject,
       monthly_salary: input.monthlySalary,
-    }) as any)name: input.name,
-      subject: input.subject,
-      monthly_salary: input.monthlySalary,
-    })
+    }) as any)
     .eq("id", id)
     .select()
     .single();
 
   if (error) {
-    console.error("Error updating teacher:", {
-      message: error.message,
-      code: error.code,
-      hint: (error as any).hint,
-      details: (error as any).details,
-    });
+    logDbError("updating teacher", error);
     return null;
   }
 
-  return {
-    id: data.id,
-    name: data.name,
-    subject: data.subject,
-    monthlySalary: data.monthly_salary,
-    createdAt: data.created_at,
-  };
+  return mapTeacher(data);
 }
 
 export async function deleteTeacher(id: string): Promise<boolean> {
   const { error } = await getSupabase().from("teachers").delete().eq("id", id);
 
   if (error) {
-    console.error("Error deleting teacher:", {
-      message: error.message,
-      code: error.code,
-      hint: (error as any).hint,
-      details: (error as any).details,
-    });
+    logDbError("deleting teacher", error);
     return false;
   }
 
