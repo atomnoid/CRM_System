@@ -1,7 +1,7 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 // Define the database schema for TypeScript
-type Database = {
+export type Database = {
   public: {
     Tables: {
       students: {
@@ -32,6 +32,7 @@ type Database = {
           paid_till_month?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       teachers: {
         Row: {
@@ -55,14 +56,17 @@ type Database = {
           monthly_salary?: number;
           created_at?: string;
         };
+        Relationships: [];
       };
     };
+    Views: {};
+    Functions: {};
   };
 };
 
-let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
+let supabaseInstance: SupabaseClient<Database> | null = null;
 
-export function getSupabase() {
+export function getSupabase(): SupabaseClient<Database> {
   if (supabaseInstance) {
     return supabaseInstance;
   }
@@ -77,3 +81,4 @@ export function getSupabase() {
   supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey);
   return supabaseInstance;
 }
+
