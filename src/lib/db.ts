@@ -66,16 +66,15 @@ export async function createStudent(input: {
   feePaid: boolean;
 }): Promise<Student | null> {
   const client = getSupabase();
-  const { data, error } = await (client
+
+  const { data, error } = await client
     .from("students")
-    .insert([
-      {
-        name: input.name,
-        class: input.class,
-        monthly_fee: input.monthlyFee,
-        fee_paid: input.feePaid,
-      },
-    ]) as any)
+    .insert({
+      name: input.name,
+      class: input.class,
+      monthly_fee: input.monthlyFee,
+      fee_paid: input.feePaid,
+    })
     .select()
     .single();
 
@@ -97,14 +96,14 @@ export async function updateStudent(
   }
 ): Promise<Student | null> {
   const client = getSupabase();
-  const { data, error } = await (client
+  const { data, error } = await client
     .from("students")
     .update({
       name: input.name,
       class: input.class,
       monthly_fee: input.monthlyFee,
       fee_paid: input.feePaid,
-    }) as any)
+    })
     .eq("id", id)
     .select()
     .single();
@@ -141,11 +140,11 @@ export async function toggleStudentFeeStatus(id: string): Promise<Student | null
   }
 
   const client = getSupabase();
-  const { data, error } = await (client
+  const { data, error } = await client
     .from("students")
     .update({
       fee_paid: !student.fee_paid,
-    }) as any)
+    })
     .eq("id", id)
     .select()
     .single();
@@ -182,15 +181,13 @@ export async function createTeacher(input: {
   monthlySalary: number;
 }): Promise<Teacher | null> {
   const client = getSupabase();
-  const { data, error } = await (client
+  const { data, error } = await client
     .from("teachers")
-    .insert([
-      {
-        name: input.name,
-        subject: input.subject,
-        monthly_salary: input.monthlySalary,
-      },
-    ]) as any)
+    .insert({
+      name: input.name,
+      subject: input.subject,
+      monthly_salary: input.monthlySalary,
+    })
     .select()
     .single();
 
@@ -211,13 +208,13 @@ export async function updateTeacher(
   }
 ): Promise<Teacher | null> {
   const client = getSupabase();
-  const { data, error } = await (client
+  const { data, error } = await client
     .from("teachers")
     .update({
       name: input.name,
       subject: input.subject,
       monthly_salary: input.monthlySalary,
-    }) as any)
+    })
     .eq("id", id)
     .select()
     .single();
