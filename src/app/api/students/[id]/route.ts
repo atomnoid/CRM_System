@@ -9,27 +9,43 @@ export async function PATCH(
   request: Request,
   context: RouteContext
 ): Promise<NextResponse> {
-  const { id } = await context.params;
-  const input = await request.json();
-  const student = await updateStudent(id, input);
+  try {
+    const { id } = await context.params;
+    const input = await request.json();
+    const student = await updateStudent(id, input);
 
-  if (!student) {
-    return NextResponse.json({ error: "Failed to update student" }, { status: 500 });
+    if (!student) {
+      return NextResponse.json({ error: "Failed to update student" }, { status: 500 });
+    }
+
+    return NextResponse.json(student);
+  } catch (error: any) {
+    console.error("PATCH /api/students/[id] error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to update student" },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json(student);
 }
 
 export async function DELETE(
   _request: Request,
   context: RouteContext
 ): Promise<NextResponse> {
-  const { id } = await context.params;
-  const success = await deleteStudent(id);
+  try {
+    const { id } = await context.params;
+    const success = await deleteStudent(id);
 
-  if (!success) {
-    return NextResponse.json({ error: "Failed to delete student" }, { status: 500 });
+    if (!success) {
+      return NextResponse.json({ error: "Failed to delete student" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("DELETE /api/students/[id] error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to delete student" },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json({ success: true });
 }
