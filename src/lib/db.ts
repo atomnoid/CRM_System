@@ -53,7 +53,7 @@ export async function getStudents(): Promise<Student[]> {
 
   if (error) {
     logDbError("fetching students", error);
-    return [];
+    throw new Error(`Database error fetching students: ${error.message}`);
   }
 
   return (data || []).map(mapStudent);
@@ -80,7 +80,7 @@ export async function createStudent(input: {
 
   if (error) {
     logDbError("creating student", error);
-    return null;
+    throw new Error(`Database error creating student: ${error.message}`);
   }
 
   return mapStudent(data);
@@ -110,7 +110,7 @@ export async function updateStudent(
 
   if (error) {
     logDbError("updating student", error);
-    return null;
+    throw new Error(`Database error updating student: ${error.message}`);
   }
 
   return mapStudent(data);
@@ -121,7 +121,7 @@ export async function deleteStudent(id: string): Promise<boolean> {
 
   if (error) {
     logDbError("deleting student", error);
-    return false;
+    throw new Error(`Database error deleting student: ${error.message}`);
   }
 
   return true;
@@ -136,7 +136,7 @@ export async function toggleStudentFeeStatus(id: string): Promise<Student | null
 
   if (fetchError) {
     logDbError("fetching student", fetchError);
-    return null;
+    throw new Error(`Database error fetching student status: ${fetchError.message}`);
   }
 
   const client = getSupabase();
@@ -151,7 +151,7 @@ export async function toggleStudentFeeStatus(id: string): Promise<Student | null
 
   if (error) {
     logDbError("toggling fee status", error);
-    return null;
+    throw new Error(`Database error toggling fee status: ${error.message}`);
   }
 
   return mapStudent(data);
@@ -169,7 +169,7 @@ export async function getTeachers(): Promise<Teacher[]> {
 
   if (error) {
     logDbError("fetching teachers", error);
-    return [];
+    throw new Error(`Database error fetching teachers: ${error.message}`);
   }
 
   return (data || []).map(mapTeacher);
@@ -193,7 +193,7 @@ export async function createTeacher(input: {
 
   if (error) {
     logDbError("creating teacher", error);
-    return null;
+    throw new Error(`Database error creating teacher: ${error.message}`);
   }
 
   return mapTeacher(data);
@@ -221,7 +221,7 @@ export async function updateTeacher(
 
   if (error) {
     logDbError("updating teacher", error);
-    return null;
+    throw new Error(`Database error updating teacher: ${error.message}`);
   }
 
   return mapTeacher(data);
@@ -232,7 +232,7 @@ export async function deleteTeacher(id: string): Promise<boolean> {
 
   if (error) {
     logDbError("deleting teacher", error);
-    return false;
+    throw new Error(`Database error deleting teacher: ${error.message}`);
   }
 
   return true;
