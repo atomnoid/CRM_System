@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: ReactNode }): JSX.E
     <html lang="en">
       <body>
         <CrmProvider>
-          <div className="flex min-h-screen bg-[#f5f3ff]">
+          <div className="flex flex-col md:flex-row min-h-screen bg-[#f5f3ff]">
             <Sidebar />
             <main className="flex-1 p-4 md:p-8">
               <div className="mx-auto max-w-6xl">{children}</div>
