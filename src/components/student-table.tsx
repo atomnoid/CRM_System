@@ -75,7 +75,8 @@ export function StudentTable(): React.JSX.Element {
         <h3 className="text-lg font-semibold text-unicorn-primary">Students</h3>
         <Button onClick={openAdd}>Add Student</Button>
       </div>
-      <div className="overflow-x-auto">
+      {/* Desktop Table View */}
+      <div className="hidden md:block overflow-x-auto">
         <Table>
           <thead>
             <tr>
@@ -89,7 +90,7 @@ export function StudentTable(): React.JSX.Element {
           <tbody>
             {students.map((student) => (
               <tr key={student.id}>
-                <TableCell>{student.name}</TableCell>
+                <TableCell className="font-medium">{student.name}</TableCell>
                 <TableCell>{student.class}</TableCell>
                 <TableCell>Rs {student.monthlyFee.toLocaleString()}</TableCell>
                 <TableCell>
@@ -112,6 +113,63 @@ export function StudentTable(): React.JSX.Element {
             ))}
           </tbody>
         </Table>
+      </div>
+
+      {/* Mobile Card List View */}
+      <div className="grid grid-cols-1 gap-4 p-4 md:hidden">
+        {students.map((student) => (
+          <div
+            key={student.id}
+            className="flex flex-col gap-3 rounded-xl border border-border bg-white p-4 shadow-sm transition-all duration-200 hover:shadow-md"
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-unicorn-primary text-base">{student.name}</span>
+              <Badge tone={student.feePaid ? "paid" : "pending"}>
+                {student.feePaid ? "Paid" : "Pending"}
+              </Badge>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 border-t border-slate-100 pt-3">
+              <div>
+                <span className="block text-slate-400 font-medium mb-0.5">Class</span>
+                <span className="text-slate-700 font-semibold text-sm">{student.class}</span>
+              </div>
+              <div>
+                <span className="block text-slate-400 font-medium mb-0.5">Monthly Fee</span>
+                <span className="text-slate-700 font-semibold text-sm">Rs {student.monthlyFee.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3 mt-1">
+              <Button
+                variant="outline"
+                className="h-9 flex-1 text-xs font-medium"
+                onClick={() => openEdit(student)}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="outline"
+                className="h-9 flex-1 text-xs font-medium"
+                onClick={() => toggleStudentFeeStatus(student.id)}
+              >
+                Status
+              </Button>
+              <Button
+                variant="destructive"
+                className="h-9 px-3 text-xs font-medium"
+                onClick={() => deleteStudent(student.id)}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        ))}
+        {students.length === 0 && (
+          <div className="text-center py-8 text-sm text-slate-400 font-medium">
+            No students found.
+          </div>
+        )}
       </div>
 
       <ModalForm open={isOpen} onClose={() => setIsOpen(false)} title={editingStudent ? "Edit Student" : "Add Student"}>
