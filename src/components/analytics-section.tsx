@@ -22,13 +22,15 @@ import {
   PieChart as PieChartIcon,
   Filter,
   ArrowUpRight,
-  Sparkles
+  Sparkles,
+  RotateCcw,
+  XCircle
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useCrm } from "@/components/crm-provider";
 import type { Student } from "@/types";
 
-type DateRangePreset = "7d" | "30d" | "custom";
+type DateRangePreset = "all" | "7d" | "30d" | "custom";
 
 interface DateRange {
   preset: DateRangePreset;
@@ -50,6 +52,11 @@ export function AnalyticsSection(): React.JSX.Element {
     d.setDate(d.getDate() - 7);
     return d.toISOString().split("T")[0];
   }, []);
+  const allTimeStartStr = React.useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 90);
+    return d.toISOString().split("T")[0];
+  }, []);
 
   const [dateRange, setDateRange] = React.useState<DateRange>({
     preset: "30d",
@@ -59,13 +66,23 @@ export function AnalyticsSection(): React.JSX.Element {
 
   const handlePresetChange = (preset: DateRangePreset): void => {
     const end = new Date().toISOString().split("T")[0];
-    if (preset === "7d") {
+    if (preset === "all") {
+      setDateRange({ preset: "all", startDate: allTimeStartStr, endDate: end });
+    } else if (preset === "7d") {
       setDateRange({ preset: "7d", startDate: sevenDaysAgoStr, endDate: end });
     } else if (preset === "30d") {
       setDateRange({ preset: "30d", startDate: thirtyDaysAgoStr, endDate: end });
     } else {
       setDateRange((prev) => ({ ...prev, preset: "custom" }));
     }
+  };
+
+  const handleClearFilters = (): void => {
+    setDateRange({
+      preset: "30d",
+      startDate: thirtyDaysAgoStr,
+      endDate: todayStr
+    });
   };
 
   // Filter students based on selected date range
@@ -201,6 +218,16 @@ export function AnalyticsSection(): React.JSX.Element {
               Last 30 Days
             </button>
             <button
+              onClick={() => handlePresetChange("all")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                dateRange.preset === "all"
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                  : "text-slate-300 hover:text-white hover:bg-slate-700/50"
+              }`}
+            >
+              All Time
+            </button>
+            <button
               onClick={() => handlePresetChange("custom")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
                 dateRange.preset === "custom"
@@ -211,6 +238,15 @@ export function AnalyticsSection(): React.JSX.Element {
               <Filter className="h-3 w-3" /> Custom Range
             </button>
           </div>
+
+          {/* Clear Filter Button */}
+          <button
+            onClick={handleClearFilters}
+            title="Reset to default filters"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-800/80 hover:bg-rose-500/20 text-rose-300 hover:text-rose-200 border border-slate-700/60 hover:border-rose-500/40 transition-all backdrop-blur-md"
+          >
+            <RotateCcw className="h-3.5 w-3.5 text-rose-400" /> Clear Filter
+          </button>
 
           <AnimatePresence>
             {dateRange.preset === "custom" && (
@@ -245,6 +281,7 @@ export function AnalyticsSection(): React.JSX.Element {
           </AnimatePresence>
         </div>
       </div>
+
 
       {/* KPI Cards for Selected Filter Range */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
