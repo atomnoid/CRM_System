@@ -85,6 +85,7 @@ export function TeacherTable(): React.JSX.Element {
         <Table>
           <thead>
             <tr className="bg-slate-50/80 text-slate-600 text-xs uppercase tracking-wider">
+              <TableHead className="w-16">S.No</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Subject</TableHead>
               <TableHead>Monthly Salary</TableHead>
@@ -102,6 +103,7 @@ export function TeacherTable(): React.JSX.Element {
                   transition={{ duration: 0.2, delay: idx * 0.03 }}
                   className="border-b border-slate-100 hover:bg-indigo-50/30 transition-colors"
                 >
+                  <TableCell className="font-semibold text-slate-400 text-xs">{idx + 1}</TableCell>
                   <TableCell className="font-semibold text-slate-800">{teacher.name}</TableCell>
                   <TableCell>
                     <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
@@ -134,7 +136,7 @@ export function TeacherTable(): React.JSX.Element {
             </AnimatePresence>
             {teachers.length === 0 && (
               <tr>
-                <TableCell colSpan={4} className="text-center py-10 text-slate-400 font-medium">
+                <TableCell colSpan={5} className="text-center py-10 text-slate-400 font-medium">
                   No teachers found. Click "Add Teacher" to add faculty members.
                 </TableCell>
               </tr>
@@ -156,11 +158,17 @@ export function TeacherTable(): React.JSX.Element {
               className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md"
             >
               <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-900 text-base">{teacher.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
+                    {idx + 1}
+                  </span>
+                  <span className="font-bold text-slate-900 text-base">{teacher.name}</span>
+                </div>
                 <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
                   {teacher.subject}
                 </span>
               </div>
+
               
               <div className="grid grid-cols-1 gap-1 text-xs text-slate-500 border-t border-slate-100 pt-3">
                 <div>

@@ -74,8 +74,9 @@ export function StudentTable(): React.JSX.Element {
   const downloadCSV = (): void => {
     if (!students || students.length === 0) return;
 
-    const headers = ["ID", "Name", "Class", "Monthly Fee (Rs)", "Fee Status", "Paid Till Month", "Created Date"];
-    const rows = students.map((s) => [
+    const headers = ["S.No", "ID", "Name", "Class", "Monthly Fee (Rs)", "Fee Status", "Paid Till Month", "Created Date"];
+    const rows = students.map((s, idx) => [
+      idx + 1,
       `"${s.id}"`,
       `"${s.name.replace(/"/g, '""')}"`,
       `"${s.class.replace(/"/g, '""')}"`,
@@ -128,6 +129,7 @@ export function StudentTable(): React.JSX.Element {
         <Table>
           <thead>
             <tr className="bg-slate-50/80 text-slate-600 text-xs uppercase tracking-wider">
+              <TableHead className="w-16">S.No</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Class</TableHead>
               <TableHead>Monthly Fee</TableHead>
@@ -146,6 +148,7 @@ export function StudentTable(): React.JSX.Element {
                   transition={{ duration: 0.2, delay: idx * 0.03 }}
                   className="border-b border-slate-100 hover:bg-indigo-50/30 transition-colors"
                 >
+                  <TableCell className="font-semibold text-slate-400 text-xs">{idx + 1}</TableCell>
                   <TableCell className="font-semibold text-slate-800">{student.name}</TableCell>
                   <TableCell>
                     <span className="inline-flex items-center rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
@@ -198,7 +201,7 @@ export function StudentTable(): React.JSX.Element {
             </AnimatePresence>
             {students.length === 0 && (
               <tr>
-                <TableCell colSpan={5} className="text-center py-10 text-slate-400 font-medium">
+                <TableCell colSpan={6} className="text-center py-10 text-slate-400 font-medium">
                   No students found. Click "Add Student" to create your first record.
                 </TableCell>
               </tr>
@@ -220,11 +223,17 @@ export function StudentTable(): React.JSX.Element {
               className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md"
             >
               <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-900 text-base">{student.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
+                    {idx + 1}
+                  </span>
+                  <span className="font-bold text-slate-900 text-base">{student.name}</span>
+                </div>
                 <Badge tone={student.feePaid ? "paid" : "pending"}>
                   {student.feePaid ? "Paid" : "Pending"}
                 </Badge>
               </div>
+
 
               <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 border-t border-slate-100 pt-3">
                 <div>
