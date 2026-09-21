@@ -157,15 +157,31 @@ export function CrmProvider({ children }: { children: React.ReactNode }): React.
   };
 
   const toggleStudentFeeStatusData = async (id: string): Promise<void> => {
+    // Optimistically toggle UI status instantly
+    let originalStudent: Student | undefined;
+    setStudents((prev) =>
+      prev.map((student) => {
+        if (student.id === id) {
+          originalStudent = student;
+          const nextFeePaid = !student.feePaid;
+          return {
+            ...student,
+            feePaid: nextFeePaid,
+            paidAt: nextFeePaid ? new Date().toISOString() : undefined,
+          };
+        }
+        return student;
+      })
+    );
+
+    // Call server API asynchronously in background
     const updated = await toggleStudentFeeStatus(id);
-    if (updated) {
-      // Inject paidAt timestamp client-side when fee is toggled to Paid
-      // (paid_at column not in DB schema, so we track it in state for analytics)
-      const updatedWithTimestamp: typeof updated = updated.feePaid
-        ? { ...updated, paidAt: new Date().toISOString() }
-        : { ...updated, paidAt: undefined };
+
+    // Revert state if backend request failed
+    if (!updated && originalStudent) {
+      const revertStudent = originalStudent;
       setStudents((prev) =>
-        prev.map((student) => (student.id === id ? updatedWithTimestamp : student))
+        prev.map((student) => (student.id === id ? revertStudent : student))
       );
     }
   };

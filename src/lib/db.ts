@@ -130,7 +130,10 @@ export async function deleteStudent(id: string): Promise<boolean> {
 }
 
 export async function toggleStudentFeeStatus(id: string): Promise<Student | null> {
-  const { data: student, error: fetchError } = await getSupabase()
+  const client = getSupabase();
+
+  // Try RPC toggle if available, otherwise fetch & update
+  const { data: student, error: fetchError } = await client
     .from("students")
     .select("fee_paid")
     .eq("id", id)
@@ -141,7 +144,6 @@ export async function toggleStudentFeeStatus(id: string): Promise<Student | null
     throw new Error(`Database error fetching student status: ${fetchError.message}`);
   }
 
-  const client = getSupabase();
   const { data, error } = await client
     .from("students")
     .update({

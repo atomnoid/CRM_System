@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, Plus, Edit, Trash2, CheckCircle2, Clock } from "lucide-react";
+import { Download, Plus, Edit, Trash2, CheckCircle2, Clock, Search, X, Filter } from "lucide-react";
 import { ModalForm } from "@/components/modal-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,40 @@ export function StudentTable(): React.JSX.Element {
   const [isOpen, setIsOpen] = React.useState<boolean>(false);
   const [editingStudent, setEditingStudent] = React.useState<Student | null>(null);
   const [formState, setFormState] = React.useState<StudentFormState>(defaultStudentForm);
+
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = React.useState<string>("");
+  const [statusFilter, setStatusFilter] = React.useState<"all" | "paid" | "pending">("all");
+  const [selectedClass, setSelectedClass] = React.useState<string>("all");
+
+  // Get unique classes for filtering
+  const availableClasses = React.useMemo(() => {
+    const classes = Array.from(new Set(students.map((s) => s.class).filter(Boolean)));
+    return classes.sort();
+  }, [students]);
+
+  // Filter students based on search query, status, and class
+  const filteredStudents = React.useMemo(() => {
+    return students.filter((student) => {
+      // Text search matching Name or Class
+      const query = searchQuery.trim().toLowerCase();
+      const matchesSearch =
+        query === "" ||
+        student.name.toLowerCase().includes(query) ||
+        student.class.toLowerCase().includes(query);
+
+      // Status filter
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "paid" && student.feePaid) ||
+        (statusFilter === "pending" && !student.feePaid);
+
+      // Class filter
+      const matchesClass = selectedClass === "all" || student.class === selectedClass;
+
+      return matchesSearch && matchesStatus && matchesClass;
+    });
+  }, [students, searchQuery, statusFilter, selectedClass]);
 
   const openAdd = (): void => {
     setEditingStudent(null);
@@ -99,10 +133,13 @@ export function StudentTable(): React.JSX.Element {
 
   return (
     <Card className="p-0 border border-border shadow-sm overflow-hidden">
+      {/* Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-slate-50/50 p-4">
         <div>
           <h3 className="text-lg font-bold text-unicorn-primary">Students Directory</h3>
-          <p className="text-xs text-slate-500">Manage enrolled students, fees, and status.</p>
+          <p className="text-xs text-slate-500">
+            Showing {filteredStudents.length} of {students.length} enrolled students.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
@@ -124,6 +161,79 @@ export function StudentTable(): React.JSX.Element {
         </div>
       </div>
 
+      {/* Search and Filters Toolbar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 bg-white border-b border-slate-100">
+        {/* Search Input Bar */}
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <Input
+            type="text"
+            placeholder="Search student name or class..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-8 h-9 text-sm bg-slate-50/70 border-slate-200 focus:bg-white transition-all rounded-lg focus:ring-2 focus:ring-indigo-500/20"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-100 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Filter Selects */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium whitespace-nowrap">
+            <Filter className="h-3.5 w-3.5 text-slate-400" />
+            <span>Filter:</span>
+          </div>
+
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as "all" | "paid" | "pending")}
+            className="h-9 rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 text-xs font-medium text-slate-700 outline-none focus:border-indigo-500 focus:bg-white transition-all"
+          >
+            <option value="all">All Fee Status</option>
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+          </select>
+
+          {/* Class Filter */}
+          {availableClasses.length > 0 && (
+            <select
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+              className="h-9 rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 text-xs font-medium text-slate-700 outline-none focus:border-indigo-500 focus:bg-white transition-all"
+            >
+              <option value="all">All Classes</option>
+              {availableClasses.map((cls) => (
+                <option key={cls} value={cls}>
+                  {cls}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {/* Clear Filters Button */}
+          {(searchQuery || statusFilter !== "all" || selectedClass !== "all") && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchQuery("");
+                setStatusFilter("all");
+                setSelectedClass("all");
+              }}
+              className="h-9 px-2 text-xs text-rose-600 border-rose-200 hover:text-rose-700 hover:bg-rose-50"
+            >
+              Reset
+            </Button>
+          )}
+        </div>
+      </div>
+
       {/* Desktop Table View */}
       <div className="hidden md:block overflow-x-auto">
         <Table>
@@ -139,7 +249,7 @@ export function StudentTable(): React.JSX.Element {
           </thead>
           <tbody>
             <AnimatePresence>
-              {students.map((student, idx) => (
+              {filteredStudents.map((student, idx) => (
                 <motion.tr
                   key={student.id}
                   initial={{ opacity: 0, y: 8 }}
@@ -199,10 +309,12 @@ export function StudentTable(): React.JSX.Element {
                 </motion.tr>
               ))}
             </AnimatePresence>
-            {students.length === 0 && (
+            {filteredStudents.length === 0 && (
               <tr>
                 <TableCell colSpan={6} className="text-center py-10 text-slate-400 font-medium">
-                  No students found. Click "Add Student" to create your first record.
+                  {students.length === 0
+                    ? 'No students found. Click "Add Student" to create your first record.'
+                    : 'No matching students found. Try changing your search query or filters.'}
                 </TableCell>
               </tr>
             )}
@@ -213,7 +325,7 @@ export function StudentTable(): React.JSX.Element {
       {/* Mobile Card List View */}
       <div className="grid grid-cols-1 gap-4 p-4 md:hidden">
         <AnimatePresence>
-          {students.map((student, idx) => (
+          {filteredStudents.map((student, idx) => (
             <motion.div
               key={student.id}
               initial={{ opacity: 0, scale: 0.96 }}
@@ -272,9 +384,11 @@ export function StudentTable(): React.JSX.Element {
             </motion.div>
           ))}
         </AnimatePresence>
-        {students.length === 0 && (
+        {filteredStudents.length === 0 && (
           <div className="text-center py-8 text-sm text-slate-400 font-medium">
-            No students found.
+            {students.length === 0
+              ? 'No students found. Click "Add Student" to create your first record.'
+              : "No matching students found."}
           </div>
         )}
       </div>
