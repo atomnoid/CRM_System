@@ -9,6 +9,7 @@ function mapStudent(student: {
   fee_paid: boolean;
   paid_till_month: string | null;
   created_at: string;
+  paid_at?: string | null;
 }): Student {
   return {
     id: student.id,
@@ -18,6 +19,7 @@ function mapStudent(student: {
     feePaid: student.fee_paid,
     paidTillMonth: student.paid_till_month ?? undefined,
     createdAt: student.created_at,
+    paidAt: student.paid_at ?? (student.fee_paid ? student.created_at : undefined),
   };
 }
 
@@ -155,6 +157,20 @@ export async function toggleStudentFeeStatus(id: string): Promise<Student | null
   }
 
   return mapStudent(data);
+}
+
+export async function resetAllStudentFeesToPending(): Promise<boolean> {
+  const { error } = await getSupabase()
+    .from("students")
+    .update({ fee_paid: false })
+    .neq("id", "00000000-0000-0000-0000-000000000000");
+
+  if (error) {
+    logDbError("resetting student fees", error);
+    throw new Error(`Database error resetting student fees: ${error.message}`);
+  }
+
+  return true;
 }
 
 // ============================================

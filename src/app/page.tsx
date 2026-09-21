@@ -4,6 +4,7 @@ import type { JSX } from "react";
 import { motion } from "framer-motion";
 import { Header } from "@/components/header";
 import { DashboardCard } from "@/components/dashboard-card";
+import { QuickActions } from "@/components/quick-actions";
 import { AnalyticsSection } from "@/components/analytics-section";
 import { useCrm } from "@/components/crm-provider";
 
@@ -22,7 +23,6 @@ const itemVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" as const } }
 };
 
-
 function DashboardContent(): JSX.Element {
   const { students, isLoading } = useCrm();
 
@@ -30,7 +30,7 @@ function DashboardContent(): JSX.Element {
     return (
       <div className="space-y-8">
         <Header title="Dashboard" description="Overview of your coaching institute metrics." />
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <section className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-5">
           <DashboardCard title="Total Students" value="Loading..." tone="total" />
           <DashboardCard title="Paid Students" value="Loading..." tone="paid" />
           <DashboardCard title="Pending Students" value="Loading..." tone="pending" />
@@ -62,7 +62,7 @@ function DashboardContent(): JSX.Element {
         <Header title="Dashboard Overview" description="Overview of your coaching institute metrics and financial health." />
       </motion.div>
 
-      <motion.section variants={itemVariants} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <motion.section variants={itemVariants} className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <DashboardCard title="Total Students" value={totalStudents.toString()} tone="total" />
         <DashboardCard title="Paid Students" value={paidStudents.toString()} tone="paid" />
         <DashboardCard title="Pending Students" value={pendingStudents.toString()} tone="pending" />
@@ -71,11 +71,16 @@ function DashboardContent(): JSX.Element {
       </motion.section>
 
       <motion.div variants={itemVariants}>
+        <QuickActions />
+      </motion.div>
+
+      <motion.div variants={itemVariants}>
         <AnalyticsSection />
       </motion.div>
     </motion.div>
   );
 }
+
 
 export default function Page(): JSX.Element {
   return <DashboardContent />;

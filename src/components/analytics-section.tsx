@@ -30,7 +30,7 @@ import { Card } from "@/components/ui/card";
 import { useCrm } from "@/components/crm-provider";
 import type { Student } from "@/types";
 
-type DateRangePreset = "all" | "7d" | "30d" | "custom";
+type DateRangePreset = "all" | "30d" | "7d" | "custom";
 
 interface DateRange {
   preset: DateRangePreset;
@@ -41,21 +41,23 @@ interface DateRange {
 export function AnalyticsSection(): React.JSX.Element {
   const { students, isLoading } = useCrm();
 
-  const todayStr = React.useMemo(() => new Date().toISOString().split("T")[0], []);
+  const formatDateToLocalKey = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayStr = React.useMemo(() => formatDateToLocalKey(new Date()), []);
   const thirtyDaysAgoStr = React.useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
-    return d.toISOString().split("T")[0];
+    return formatDateToLocalKey(d);
   }, []);
   const sevenDaysAgoStr = React.useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
-    return d.toISOString().split("T")[0];
-  }, []);
-  const allTimeStartStr = React.useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 90);
-    return d.toISOString().split("T")[0];
+    return formatDateToLocalKey(d);
   }, []);
 
   const [dateRange, setDateRange] = React.useState<DateRange>({
@@ -67,7 +69,7 @@ export function AnalyticsSection(): React.JSX.Element {
   const handlePresetChange = (preset: DateRangePreset): void => {
     const end = new Date().toISOString().split("T")[0];
     if (preset === "all") {
-      setDateRange({ preset: "all", startDate: allTimeStartStr, endDate: end });
+      setDateRange({ preset: "all", startDate: "2024-01-01", endDate: end });
     } else if (preset === "7d") {
       setDateRange({ preset: "7d", startDate: sevenDaysAgoStr, endDate: end });
     } else if (preset === "30d") {
@@ -85,22 +87,53 @@ export function AnalyticsSection(): React.JSX.Element {
     });
   };
 
-  // Filter students based on selected date range
+  // Process chart & analytics data accurately by exact student creation date
   const filteredData = React.useMemo(() => {
-    const startMs = new Date(dateRange.startDate + "T00:00:00").getTime();
-    const endMs = new Date(dateRange.endDate + "T23:59:59").getTime();
+    // 1. Overall Totals
+    let totalCollected = 0;
+    let totalPending = 0;
+    let paidStudentsCount = 0;
+    let pendingStudentsCount = 0;
 
-    // Map students into daily buckets across the date range
-    const daysMap: Record<string, { date: string; label: string; revenueCollected: number; revenuePending: number; newStudents: number }> = {};
+    students.forEach((student: Student) => {
+      if (student.feePaid) {
+        totalCollected += student.monthlyFee;
+        paidStudentsCount += 1;
+      } else {
+        totalPending += student.monthlyFee;
+        pendingStudentsCount += 1;
+      }
+    });
 
-    const curr = new Date(startMs);
-    const end = new Date(endMs);
+    const totalStudentsCount = students.length;
+    const collectionRate =
+      totalCollected + totalPending > 0
+        ? Math.round((totalCollected / (totalCollected + totalPending)) * 100)
+        : 0;
+
+    // 2. Timeline Series for Charts based on Selected Date Range
+    const isAllTime = dateRange.preset === "all";
+    // Parse dates as local midnight to avoid UTC offset issues
+    const [sy, sm, sd] = dateRange.startDate.split("-").map(Number);
+    const [ey, em, ed] = dateRange.endDate.split("-").map(Number);
+    const startLocal = new Date(sy, sm - 1, sd, 0, 0, 0);
+    const endLocal = new Date(ey, em - 1, ed, 23, 59, 59);
+    const startMs = startLocal.getTime();
+    const endMs = endLocal.getTime();
+
+    const daysMap: Record<
+      string,
+      { key: string; label: string; revenueCollected: number; revenuePending: number; newStudents: number }
+    > = {};
+
+    // Build map using LOCAL calendar dates so keys match student local dates
+    const curr = new Date(startLocal);
     let guard = 0;
-    while (curr <= end && guard < 366) {
-      const dateStr = curr.toISOString().split("T")[0];
+    while (curr.getTime() <= endLocal.getTime() && guard < 366) {
+      const dateStr = formatDateToLocalKey(curr);
       const label = curr.toLocaleDateString("en-US", { month: "short", day: "numeric" });
       daysMap[dateStr] = {
-        date: dateStr,
+        key: dateStr,
         label,
         revenueCollected: 0,
         revenuePending: 0,
@@ -110,53 +143,67 @@ export function AnalyticsSection(): React.JSX.Element {
       guard++;
     }
 
-    let periodStudentsCount = 0;
-    let periodCollectedRevenue = 0;
-    let periodPendingRevenue = 0;
+    let newStudentsInWindow = 0;
 
-    students.forEach((student: Student, idx: number) => {
-      let studentDateStr: string;
-      if (student.createdAt) {
-        studentDateStr = student.createdAt.split("T")[0];
-      } else {
-        const d = new Date();
-        d.setDate(d.getDate() - (idx % 14));
-        studentDateStr = d.toISOString().split("T")[0];
+    students.forEach((student: Student) => {
+      // Convert stored timestamps to LOCAL calendar date strings
+      const studentCreatedDateStr = student.createdAt
+        ? formatDateToLocalKey(new Date(student.createdAt))
+        : todayStr;
+
+      // For "paid" status date:
+      // - If paidAt was injected this session (just toggled) → use that exact date
+      // - If loaded from DB with no paidAt → use createdAt as the best known date
+      // This prevents ALL historical paid fees from piling onto today's date
+      const studentPaidDateStr = (student.paidAt && student.feePaid)
+        ? formatDateToLocalKey(new Date(student.paidAt))
+        : studentCreatedDateStr;  // Always fall back to creation date, never to todayStr
+
+      // Count new students enrolled in window
+      const [cY, cM, cD] = studentCreatedDateStr.split("-").map(Number);
+      const createdLocalMs = new Date(cY, cM - 1, cD, 12, 0, 0).getTime();
+      const inCreatedRange = isAllTime || (createdLocalMs >= startMs && createdLocalMs <= endMs);
+      if (inCreatedRange) {
+        newStudentsInWindow += 1;
       }
 
-      const studentMs = new Date(studentDateStr + "T12:00:00").getTime();
-      const inRange = studentMs >= startMs && studentMs <= endMs;
+      // Map new student enrollment to their creation date in chart (enrollment chart - don't touch)
+      if (daysMap[studentCreatedDateStr]) {
+        daysMap[studentCreatedDateStr].newStudents += 1;
+      }
 
-      if (inRange || !student.createdAt) {
-        if (daysMap[studentDateStr]) {
-          daysMap[studentDateStr].newStudents += 1;
-          if (student.feePaid) {
-            daysMap[studentDateStr].revenueCollected += student.monthlyFee;
-          } else {
-            daysMap[studentDateStr].revenuePending += student.monthlyFee;
-          }
+      // Map revenue: paid students show on their exact paid date, pending on creation date
+      // Only count revenue if the target date is within the active chart window
+      if (student.feePaid) {
+        if (daysMap[studentPaidDateStr]) {
+          daysMap[studentPaidDateStr].revenueCollected += student.monthlyFee;
         }
-        periodStudentsCount += 1;
-        if (student.feePaid) {
-          periodCollectedRevenue += student.monthlyFee;
-        } else {
-          periodPendingRevenue += student.monthlyFee;
+        // If paid date is outside chart window, don't force it onto today - skip it
+      } else {
+        if (daysMap[studentCreatedDateStr]) {
+          daysMap[studentCreatedDateStr].revenuePending += student.monthlyFee;
         }
       }
     });
 
-    const chartSeries = Object.values(daysMap).sort((a, b) => a.date.localeCompare(b.date));
+    const chartSeries = Object.keys(daysMap)
+      .sort()
+      .map((k) => daysMap[k]);
 
     return {
       chartSeries,
-      totalNewStudents: periodStudentsCount,
-      totalCollected: periodCollectedRevenue,
-      totalPending: periodPendingRevenue,
-      collectionRate: periodCollectedRevenue + periodPendingRevenue > 0 
-        ? Math.round((periodCollectedRevenue / (periodCollectedRevenue + periodPendingRevenue)) * 100) 
-        : 0
+      totalNewStudents: isAllTime ? totalStudentsCount : newStudentsInWindow,
+      totalCollected,
+      totalPending,
+      collectionRate,
+      paidStudentsCount,
+      pendingStudentsCount,
+      totalStudentsCount
     };
-  }, [students, dateRange]);
+  }, [students, dateRange, todayStr]);
+
+
+
 
   if (isLoading) {
     return (
@@ -177,114 +224,84 @@ export function AnalyticsSection(): React.JSX.Element {
       className="space-y-6"
     >
       {/* Header & Date Filtering Toolbar */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 text-white shadow-xl relative overflow-hidden">
+      <div className="flex flex-col gap-3 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-4 sm:p-6 text-white shadow-xl relative overflow-hidden">
         <div className="absolute -right-10 -bottom-10 h-48 w-48 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
         <div className="absolute -left-10 -top-10 h-48 w-48 rounded-full bg-purple-500/20 blur-3xl pointer-events-none" />
 
         <div className="space-y-1 relative z-10">
           <div className="flex items-center gap-2">
-            <PieChartIcon className="h-5 w-5 text-indigo-400" />
-            <h2 className="text-xl font-bold tracking-tight">Performance Analytics</h2>
-            <span className="rounded-full bg-indigo-500/20 px-2.5 py-0.5 text-xs font-semibold text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
-              <Sparkles className="h-3 w-3 text-indigo-300" /> Live
+            <PieChartIcon className="h-4 w-4 text-indigo-400" />
+            <h2 className="text-base sm:text-xl font-bold tracking-tight">Performance Analytics</h2>
+            <span className="rounded-full bg-indigo-500/20 px-2 py-0.5 text-[10px] sm:text-xs font-semibold text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
+              <Sparkles className="h-2.5 w-2.5 text-indigo-300" /> Live
             </span>
           </div>
-          <p className="text-xs text-slate-300">
+          <p className="text-[11px] sm:text-xs text-slate-400 hidden sm:block">
             Real-time insight into institute revenue, new student growth, and collection performance.
           </p>
         </div>
 
-        {/* Date Controls */}
-        <div className="flex flex-wrap items-center gap-2 relative z-10">
-          <div className="inline-flex rounded-xl bg-slate-800/80 p-1 border border-slate-700/60 backdrop-blur-md">
-            <button
-              onClick={() => handlePresetChange("7d")}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                dateRange.preset === "7d"
-                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                  : "text-slate-300 hover:text-white hover:bg-slate-700/50"
-              }`}
-            >
-              Last 7 Days
-            </button>
-            <button
-              onClick={() => handlePresetChange("30d")}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                dateRange.preset === "30d"
-                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                  : "text-slate-300 hover:text-white hover:bg-slate-700/50"
-              }`}
-            >
-              Last 30 Days
-            </button>
-            <button
-              onClick={() => handlePresetChange("all")}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                dateRange.preset === "all"
-                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                  : "text-slate-300 hover:text-white hover:bg-slate-700/50"
-              }`}
-            >
-              All Time
-            </button>
-            <button
-              onClick={() => handlePresetChange("custom")}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 ${
-                dateRange.preset === "custom"
-                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                  : "text-slate-300 hover:text-white hover:bg-slate-700/50"
-              }`}
-            >
-              <Filter className="h-3 w-3" /> Custom Range
-            </button>
+        {/* Date Controls — horizontally scrollable on mobile */}
+        <div className="flex items-center gap-2 relative z-10 overflow-x-auto pb-0.5 scrollbar-none -mx-1 px-1">
+          <div className="inline-flex shrink-0 rounded-xl bg-slate-800/80 p-1 border border-slate-700/60 backdrop-blur-md">
+            {(["7d", "30d", "all", "custom"] as const).map((preset) => (
+              <button
+                key={preset}
+                onClick={() => handlePresetChange(preset)}
+                className={`px-2.5 py-1.5 text-[11px] sm:text-xs font-semibold rounded-lg transition-all whitespace-nowrap flex items-center gap-1 ${
+                  dateRange.preset === preset
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                    : "text-slate-300 hover:text-white hover:bg-slate-700/50"
+                }`}
+              >
+                {preset === "custom" && <Filter className="h-2.5 w-2.5" />}
+                {preset === "7d" ? "7D" : preset === "30d" ? "30D" : preset === "all" ? "All" : "Custom"}
+              </button>
+            ))}
           </div>
 
-          {/* Clear Filter Button */}
+          {/* Clear Filter */}
           <button
             onClick={handleClearFilters}
             title="Reset to default filters"
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-800/80 hover:bg-rose-500/20 text-rose-300 hover:text-rose-200 border border-slate-700/60 hover:border-rose-500/40 transition-all backdrop-blur-md"
+            className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-[11px] sm:text-xs font-semibold rounded-xl bg-slate-800/80 hover:bg-rose-500/20 text-rose-300 border border-slate-700/60 transition-all"
           >
-            <RotateCcw className="h-3.5 w-3.5 text-rose-400" /> Clear Filter
+            <RotateCcw className="h-3 w-3 text-rose-400" />
+            <span className="hidden sm:inline">Clear</span>
           </button>
-
-          <AnimatePresence>
-            {dateRange.preset === "custom" && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, width: 0 }}
-                animate={{ opacity: 1, scale: 1, width: "auto" }}
-                exit={{ opacity: 0, scale: 0.95, width: 0 }}
-                className="flex items-center gap-2 bg-slate-800/90 p-1.5 rounded-xl border border-slate-700/80 text-xs"
-              >
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                  <input
-                    type="date"
-                    value={dateRange.startDate}
-                    onChange={(e) =>
-                      setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
-                    }
-                    className="bg-slate-900 text-white rounded px-2 py-1 border border-slate-700 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-                <span className="text-slate-400">to</span>
-                <input
-                  type="date"
-                  value={dateRange.endDate}
-                  onChange={(e) =>
-                    setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
-                  }
-                  className="bg-slate-900 text-white rounded px-2 py-1 border border-slate-700 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
+
+        {/* Custom date range picker — stacks below on mobile */}
+        <AnimatePresence>
+          {dateRange.preset === "custom" && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="flex flex-wrap items-center gap-2 bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60 text-xs relative z-10 mt-1"
+            >
+              <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              <input
+                type="date"
+                value={dateRange.startDate}
+                onChange={(e) => setDateRange((prev) => ({ ...prev, startDate: e.target.value }))}
+                className="flex-1 min-w-0 bg-slate-900 text-white rounded-lg px-2.5 py-1.5 border border-slate-700 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+              <span className="text-slate-400">→</span>
+              <input
+                type="date"
+                value={dateRange.endDate}
+                onChange={(e) => setDateRange((prev) => ({ ...prev, endDate: e.target.value }))}
+                className="flex-1 min-w-0 bg-slate-900 text-white rounded-lg px-2.5 py-1.5 border border-slate-700 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
 
-      {/* KPI Cards for Selected Filter Range */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* KPI Cards — 2-col on mobile, 4-col on desktop */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Card className="p-5 border border-emerald-100 bg-gradient-to-br from-emerald-50/50 via-white to-emerald-50/20 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Period Collected</p>
@@ -342,7 +359,12 @@ export function AnalyticsSection(): React.JSX.Element {
             </div>
           </div>
           <div className="mt-3">
-            <p className="text-2xl font-bold text-slate-900">{filteredData.collectionRate}%</p>
+            <div className="flex items-baseline justify-between">
+              <p className="text-2xl font-bold text-slate-900">{filteredData.collectionRate}%</p>
+              <span className="text-[10px] text-purple-600 font-semibold bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
+                Collected / Total
+              </span>
+            </div>
             <div className="w-full bg-slate-200 h-2 rounded-full mt-2 overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
@@ -351,6 +373,9 @@ export function AnalyticsSection(): React.JSX.Element {
                 className="bg-purple-600 h-full rounded-full"
               />
             </div>
+            <p className="text-[11px] text-slate-500 font-medium mt-1.5">
+              Rs {filteredData.totalCollected.toLocaleString()} of Rs {(filteredData.totalCollected + filteredData.totalPending).toLocaleString()}
+            </p>
           </div>
         </Card>
       </div>
@@ -358,7 +383,7 @@ export function AnalyticsSection(): React.JSX.Element {
       {/* Interactive Recharts Section */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Revenue Area Chart */}
-        <Card className="p-6 border border-border shadow-sm hover:shadow-md transition-all">
+        <Card className="p-4 sm:p-6 border border-border shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-base font-bold text-slate-800">Revenue Trend (Collected vs Pending)</h3>
@@ -368,7 +393,7 @@ export function AnalyticsSection(): React.JSX.Element {
               Rs currency
             </span>
           </div>
-          <div className="h-72 w-full">
+          <div className="h-52 sm:h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={filteredData.chartSeries} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
@@ -382,8 +407,8 @@ export function AnalyticsSection(): React.JSX.Element {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} interval="preserveStartEnd" />
+                <YAxis tick={{ fontSize: 10, fill: "#64748b" }} tickLine={false} width={40} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#0f172a",
@@ -420,7 +445,7 @@ export function AnalyticsSection(): React.JSX.Element {
         </Card>
 
         {/* New Students Bar Chart */}
-        <Card className="p-6 border border-border shadow-sm hover:shadow-md transition-all">
+        <Card className="p-4 sm:p-6 border border-border shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-base font-bold text-slate-800">New Students Enrolled</h3>
@@ -430,12 +455,12 @@ export function AnalyticsSection(): React.JSX.Element {
               Enrollments
             </span>
           </div>
-          <div className="h-72 w-full">
+          <div className="h-52 sm:h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={filteredData.chartSeries} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 9, fill: "#94a3b8" }} tickLine={false} interval="preserveStartEnd" />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#64748b" }} tickLine={false} width={30} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#0f172a",

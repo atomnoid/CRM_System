@@ -59,6 +59,15 @@ export async function toggleStudentFeeStatus(id: string): Promise<Student | null
   return parseJson<Student>(response);
 }
 
+export async function resetAllStudentFeesToPending(): Promise<boolean> {
+  const response = await fetch("/api/students/reset-fees", {
+    method: "POST",
+  });
+
+  return response.ok;
+}
+
+
 export async function getTeachers(): Promise<Teacher[]> {
   const response = await fetch("/api/teachers");
   return (await parseJson<Teacher[]>(response)) ?? [];

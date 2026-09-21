@@ -7,6 +7,7 @@ import {
   updateStudent,
   deleteStudent,
   toggleStudentFeeStatus,
+  resetAllStudentFeesToPending,
   getTeachers,
   createTeacher,
   updateTeacher,
@@ -34,6 +35,9 @@ interface CrmContextValue {
   updateStudent: (id: string, input: StudentInput) => Promise<void>;
   deleteStudent: (id: string) => Promise<void>;
   toggleStudentFeeStatus: (id: string) => Promise<void>;
+  resetAllStudentFeesToPending: () => Promise<void>;
+  undoResetStudentFees: () => Promise<void>;
+  canUndoReset: boolean;
   addTeacher: (input: TeacherInput) => Promise<void>;
   updateTeacher: (id: string, input: TeacherInput) => Promise<void>;
   deleteTeacher: (id: string) => Promise<void>;
@@ -46,8 +50,56 @@ export function CrmProvider({ children }: { children: React.ReactNode }): React.
   const [students, setStudents] = React.useState<Student[]>([]);
   const [teachers, setTeachers] = React.useState<Teacher[]>([]);
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
+  const [previousStudentFeeStates, setPreviousStudentFeeStates] = React.useState<Record<string, boolean> | null>(null);
 
-  // Fetch initial data
+  const resetAllStudentFeesToPendingData = React.useCallback(async (): Promise<void> => {
+    // Snapshot current student states before reset
+    setStudents((prev) => {
+      const snapshot: Record<string, boolean> = {};
+      prev.forEach((s) => {
+        snapshot[s.id] = s.feePaid;
+      });
+      setPreviousStudentFeeStates(snapshot);
+      return prev;
+    });
+
+    const success = await resetAllStudentFeesToPending();
+    if (success) {
+      setStudents((prev) => prev.map((student) => ({ ...student, feePaid: false })));
+    }
+  }, []);
+
+  const undoResetStudentFeesData = React.useCallback(async (): Promise<void> => {
+    if (!previousStudentFeeStates) return;
+
+    // Restore previous student states
+    const updatePromises = Object.entries(previousStudentFeeStates).map(async ([id, feePaid]) => {
+      const student = students.find((s) => s.id === id);
+      if (student && student.feePaid !== feePaid) {
+        await updateStudent(id, {
+          name: student.name,
+          class: student.class,
+          monthlyFee: student.monthlyFee,
+          feePaid,
+        });
+      }
+    });
+
+    await Promise.all(updatePromises);
+
+    setStudents((prev) =>
+      prev.map((student) => {
+        if (previousStudentFeeStates[student.id] !== undefined) {
+          return { ...student, feePaid: previousStudentFeeStates[student.id] };
+        }
+        return student;
+      })
+    );
+
+    setPreviousStudentFeeStates(null);
+  }, [previousStudentFeeStates, students]);
+
+  // Fetch initial data & check automated monthly reset
   React.useEffect(() => {
     const fetchData = async (): Promise<void> => {
       setIsLoading(true);
@@ -58,10 +110,28 @@ export function CrmProvider({ children }: { children: React.ReactNode }): React.
       setStudents(studentsData);
       setTeachers(teachersData);
       setIsLoading(false);
+
+      // Automated check on the 1st of every month
+      try {
+        const now = new Date();
+        const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        const lastReset = typeof window !== "undefined" ? localStorage.getItem("crm_last_fee_reset_month") : null;
+
+        if (lastReset && lastReset !== currentYearMonth) {
+          console.log(`New billing month detected (${currentYearMonth}). Resetting student fees to Pending...`);
+          await resetAllStudentFeesToPending();
+          setStudents((prev) => prev.map((s) => ({ ...s, feePaid: false })));
+          localStorage.setItem("crm_last_fee_reset_month", currentYearMonth);
+        } else if (!lastReset) {
+          localStorage.setItem("crm_last_fee_reset_month", currentYearMonth);
+        }
+      } catch (err) {
+        console.error("Monthly reset check error:", err);
+      }
     };
 
     fetchData();
-  }, []);
+  }, [resetAllStudentFeesToPendingData]);
 
   const addStudent = async (input: StudentInput): Promise<void> => {
     const newStudent = await createStudent(input);
@@ -89,8 +159,13 @@ export function CrmProvider({ children }: { children: React.ReactNode }): React.
   const toggleStudentFeeStatusData = async (id: string): Promise<void> => {
     const updated = await toggleStudentFeeStatus(id);
     if (updated) {
+      // Inject paidAt timestamp client-side when fee is toggled to Paid
+      // (paid_at column not in DB schema, so we track it in state for analytics)
+      const updatedWithTimestamp: typeof updated = updated.feePaid
+        ? { ...updated, paidAt: new Date().toISOString() }
+        : { ...updated, paidAt: undefined };
       setStudents((prev) =>
-        prev.map((student) => (student.id === id ? updated : student))
+        prev.map((student) => (student.id === id ? updatedWithTimestamp : student))
       );
     }
   };
@@ -127,6 +202,9 @@ export function CrmProvider({ children }: { children: React.ReactNode }): React.
         updateStudent: updateStudentData,
         deleteStudent: deleteStudentData,
         toggleStudentFeeStatus: toggleStudentFeeStatusData,
+        resetAllStudentFeesToPending: resetAllStudentFeesToPendingData,
+        undoResetStudentFees: undoResetStudentFeesData,
+        canUndoReset: previousStudentFeeStates !== null,
         addTeacher,
         updateTeacher: updateTeacherData,
         deleteTeacher: deleteTeacherData,
@@ -137,6 +215,7 @@ export function CrmProvider({ children }: { children: React.ReactNode }): React.
     </CrmContext.Provider>
   );
 }
+
 
 export function useCrm(): CrmContextValue {
   const context = React.useContext(CrmContext);
