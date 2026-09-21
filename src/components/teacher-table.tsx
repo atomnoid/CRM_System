@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Edit, Trash2, BookOpen } from "lucide-react";
 import { ModalForm } from "@/components/modal-form";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -65,83 +67,127 @@ export function TeacherTable(): React.JSX.Element {
   };
 
   return (
-    <Card className="p-0">
-      <div className="flex items-center justify-between border-b border-border p-4">
-        <h3 className="text-lg font-semibold text-unicorn-primary">Teachers</h3>
-        <Button onClick={openAdd}>Add Teacher</Button>
+    <Card className="p-0 border border-border shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between border-b border-border bg-slate-50/50 p-4">
+        <div>
+          <h3 className="text-lg font-bold text-unicorn-primary">Faculty Directory</h3>
+          <p className="text-xs text-slate-500">Manage teaching staff, subjects, and salaries.</p>
+        </div>
+        <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+          <Button onClick={openAdd} className="flex items-center gap-2 font-semibold">
+            <Plus className="h-4 w-4" /> Add Teacher
+          </Button>
+        </motion.div>
       </div>
+
       {/* Desktop Table View */}
       <div className="hidden md:block overflow-x-auto">
         <Table>
           <thead>
-            <tr>
+            <tr className="bg-slate-50/80 text-slate-600 text-xs uppercase tracking-wider">
               <TableHead>Name</TableHead>
               <TableHead>Subject</TableHead>
               <TableHead>Monthly Salary</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="text-right pr-6">Actions</TableHead>
             </tr>
           </thead>
           <tbody>
-            {teachers.map((teacher) => (
-              <tr key={teacher.id}>
-                <TableCell className="font-medium">{teacher.name}</TableCell>
-                <TableCell>{teacher.subject}</TableCell>
-                <TableCell>Rs {teacher.monthlySalary.toLocaleString()}</TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" className="h-8 px-3" onClick={() => openEdit(teacher)}>
-                      Edit
-                    </Button>
-                    <Button variant="destructive" className="h-8 px-3" onClick={() => deleteTeacher(teacher.id)}>
-                      Delete
-                    </Button>
-                  </div>
+            <AnimatePresence>
+              {teachers.map((teacher, idx) => (
+                <motion.tr
+                  key={teacher.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2, delay: idx * 0.03 }}
+                  className="border-b border-slate-100 hover:bg-indigo-50/30 transition-colors"
+                >
+                  <TableCell className="font-semibold text-slate-800">{teacher.name}</TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+                      <BookOpen className="h-3 w-3 text-indigo-500" /> {teacher.subject}
+                    </span>
+                  </TableCell>
+                  <TableCell className="font-semibold text-slate-900">
+                    Rs {teacher.monthlySalary.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="text-right pr-6">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        className="h-8 px-3 text-xs font-medium hover:border-indigo-300 hover:bg-indigo-50"
+                        onClick={() => openEdit(teacher)}
+                      >
+                        <Edit className="h-3.5 w-3.5 mr-1 text-slate-500" /> Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        className="h-8 px-3 text-xs font-medium"
+                        onClick={() => deleteTeacher(teacher.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                      </Button>
+                    </div>
+                  </TableCell>
+                </motion.tr>
+              ))}
+            </AnimatePresence>
+            {teachers.length === 0 && (
+              <tr>
+                <TableCell colSpan={4} className="text-center py-10 text-slate-400 font-medium">
+                  No teachers found. Click "Add Teacher" to add faculty members.
                 </TableCell>
               </tr>
-            ))}
+            )}
           </tbody>
         </Table>
       </div>
 
       {/* Mobile Card List View */}
       <div className="grid grid-cols-1 gap-4 p-4 md:hidden">
-        {teachers.map((teacher) => (
-          <div
-            key={teacher.id}
-            className="flex flex-col gap-3 rounded-xl border border-border bg-white p-4 shadow-sm transition-all duration-200 hover:shadow-md"
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-unicorn-primary text-base">{teacher.name}</span>
-              <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
-                {teacher.subject}
-              </span>
-            </div>
-            
-            <div className="grid grid-cols-1 gap-1 text-xs text-slate-500 border-t border-slate-100 pt-3">
-              <div>
-                <span className="block text-slate-400 font-medium mb-0.5">Monthly Salary</span>
-                <span className="text-slate-700 font-semibold text-sm">Rs {teacher.monthlySalary.toLocaleString()}</span>
+        <AnimatePresence>
+          {teachers.map((teacher, idx) => (
+            <motion.div
+              key={teacher.id}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2, delay: idx * 0.04 }}
+              className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-900 text-base">{teacher.name}</span>
+                <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+                  {teacher.subject}
+                </span>
               </div>
-            </div>
+              
+              <div className="grid grid-cols-1 gap-1 text-xs text-slate-500 border-t border-slate-100 pt-3">
+                <div>
+                  <span className="block text-slate-400 font-medium mb-0.5">Monthly Salary</span>
+                  <span className="text-slate-700 font-semibold text-sm">Rs {teacher.monthlySalary.toLocaleString()}</span>
+                </div>
+              </div>
 
-            <div className="flex gap-2 border-t border-slate-100 pt-3 mt-1">
-              <Button
-                variant="outline"
-                className="h-9 flex-1 text-xs font-medium"
-                onClick={() => openEdit(teacher)}
-              >
-                Edit
-              </Button>
-              <Button
-                variant="destructive"
-                className="h-9 flex-1 text-xs font-medium"
-                onClick={() => deleteTeacher(teacher.id)}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        ))}
+              <div className="flex gap-2 border-t border-slate-100 pt-3 mt-1">
+                <Button
+                  variant="outline"
+                  className="h-9 flex-1 text-xs font-medium"
+                  onClick={() => openEdit(teacher)}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="h-9 flex-1 text-xs font-medium"
+                  onClick={() => deleteTeacher(teacher.id)}
+                >
+                  Delete
+                </Button>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
         {teachers.length === 0 && (
           <div className="text-center py-8 text-sm text-slate-400 font-medium">
             No teachers found.
@@ -196,3 +242,4 @@ export function TeacherTable(): React.JSX.Element {
     </Card>
   );
 }
+

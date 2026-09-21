@@ -1,25 +1,43 @@
 "use client";
 
 import type { JSX } from "react";
+import { motion } from "framer-motion";
 import { Header } from "@/components/header";
 import { DashboardCard } from "@/components/dashboard-card";
+import { AnalyticsSection } from "@/components/analytics-section";
 import { useCrm } from "@/components/crm-provider";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" as const } }
+};
+
 
 function DashboardContent(): JSX.Element {
   const { students, isLoading } = useCrm();
 
   if (isLoading) {
     return (
-      <>
+      <div className="space-y-8">
         <Header title="Dashboard" description="Overview of your coaching institute metrics." />
-        <section className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <DashboardCard title="Total Students" value="Loading..." tone="total" />
           <DashboardCard title="Paid Students" value="Loading..." tone="paid" />
           <DashboardCard title="Pending Students" value="Loading..." tone="pending" />
           <DashboardCard title="Revenue Collected" value="Loading..." tone="revenue" />
           <DashboardCard title="Revenue Pending" value="Loading..." tone="pending-revenue" />
         </section>
-      </>
+      </div>
     );
   }
 
@@ -34,20 +52,33 @@ function DashboardContent(): JSX.Element {
     .reduce((sum, s) => sum + s.monthlyFee, 0);
 
   return (
-    <>
-      <Header title="Dashboard" description="Overview of your coaching institute metrics." />
-      <section className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8 pb-10"
+    >
+      <motion.div variants={itemVariants}>
+        <Header title="Dashboard Overview" description="Overview of your coaching institute metrics and financial health." />
+      </motion.div>
+
+      <motion.section variants={itemVariants} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <DashboardCard title="Total Students" value={totalStudents.toString()} tone="total" />
         <DashboardCard title="Paid Students" value={paidStudents.toString()} tone="paid" />
         <DashboardCard title="Pending Students" value={pendingStudents.toString()} tone="pending" />
         <DashboardCard title="Revenue Collected" value={`Rs ${revenueCollected.toLocaleString()}`} tone="revenue" />
         <DashboardCard title="Revenue Pending" value={`Rs ${revenuePending.toLocaleString()}`} tone="pending-revenue" />
-      </section>
-    </>
+      </motion.section>
+
+      <motion.div variants={itemVariants}>
+        <AnalyticsSection />
+      </motion.div>
+    </motion.div>
   );
 }
 
 export default function Page(): JSX.Element {
   return <DashboardContent />;
 }
+
 
